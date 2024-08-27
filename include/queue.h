@@ -14,7 +14,7 @@
 
 //------------------------------------------------------------------------------
 // estrutura de uma fila genérica, sem conteúdo definido.
-// Veja um exemplo de uso desta estrutura em testafila.c
+// Veja um exemplo de uso desta estrutura em queue_test.c
 
 typedef struct queue_t
 {

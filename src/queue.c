@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "queue.h"
+#include "../include/queue.h"
 
 void element_cleanup(queue_t *elem);
 
