@@ -104,7 +104,7 @@ int fila_correta (filaint_t *fila)
 
 //------------------------------------------------------------------------------
 
-int main (int argc, char **argv, char **envp)
+int testa_fila_main (int argc, char **argv, char **envp)
 {
     int i ;
 
