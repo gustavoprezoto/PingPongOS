@@ -6,4 +6,6 @@ set(CMAKE_C_STANDARD 11)
 add_executable(PingPongOs main.c
         queue.h
         queue.c
+        tests/context.c
+        ppos_data.h
 )

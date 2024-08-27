@@ -1,0 +1,16 @@
+1. Explique o objetivo e os parâmetros de cada uma das quatro funções acima.
+	getcontext(): Salva o contexto atual no parâmetro do tipo ucontext_t passada como parametro por referência;
+	setcontext(): Recupera o contexto salvo do parâmetro o tipo ucontext_t passada como parametro por referência;
+	swapcontext(): Utilizado para troca de contextos. O primeiro parametro é uma struct ucontext_t usado para salvar o contexto atual e o segundo é o contexto desejado. 
+	makecontext(): Pode receber 2+n paramêtros, onde o primeiro parâmetro é um struct ucontext_t, o segundo é a função (do tipo void*) que estará nesse contexto e as n últimas são os paramêtros dessa função.
+	
+2. Explique o significado dos campos da estrutura ucontext_t que foram utilizados no código.
+	Considerando context como uma struct do tipo ucontext_t, teriamos:
+	context.uc_stack.ss_sp = Ponteiro para a pilha que será utilizada nesse contexto. A pilha deve ser do tipo char;
+	context.uc_stack.ss_size = Tamanho do ponteiro da pilha;
+	context.uc_stack.ss_flags = Utilizado para fornecer informações sobre o estado da pilha do contexto. Nesse caso passamos NULL, o que significa que ela não terá nenhum tratamento especial.
+	context.uc_link = Ponteiro do tipo ucontext_t que aponta para o próximo contexto quando o contexto atual terminar, se ele for NULL ele volta pra onde o contexto atual foi chamado.
+
+3. Explique cada linha do código de contexts.c que chame uma dessas funções ou que manipule estruturas do tipo ucontext_t.
+
+4. Para visualizar melhor as trocas de contexto, desenhe o diagrama de tempo dessa execução.
