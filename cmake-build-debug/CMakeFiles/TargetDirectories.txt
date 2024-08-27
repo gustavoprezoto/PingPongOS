@@ -1,3 +1,0 @@
-E:/desenv/PingPongOs/cmake-build-debug/CMakeFiles/PingPongOs.dir
-E:/desenv/PingPongOs/cmake-build-debug/CMakeFiles/edit_cache.dir
-E:/desenv/PingPongOs/cmake-build-debug/CMakeFiles/rebuild_cache.dir
