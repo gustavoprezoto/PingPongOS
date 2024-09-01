@@ -9,4 +9,9 @@ add_executable(PingPongOs src/main.c
         include/ppos_data.h
         include/ppos.h
         src/ppos_core.c
+
+        # tests:
+        tests/ppos_tasks_tests/ppos_tasks1_test.c
+#        tests/ppos_tasks_tests/ppos_tasks2_test.c
+#        tests/ppos_tasks_tests/ppos_tasks3_test.c
 )

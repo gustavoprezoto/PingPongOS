@@ -62,13 +62,21 @@ int task_switch(task_t *task) {
     return 0;
 }
 
+int task_id() {
+    return exec_task->id;
+}
+
 void task_exit(int exit_code) {
+    if(exec_task == &main_task) {
+#ifdef DEBUG
+        printf("task_exit: tid 0 (main task). Retornando sem sair da task.\n");
+#endif
+        return;
+    }
+
 #ifdef DEBUG
     printf("task_exit: saindo da exec_task: %d para a task: %d.\n", exec_task->id, prev_task->id);
 #endif
     task_switch(&main_task);
-}
-
-int task_id() {
-    return exec_task->id;
+    free(exec_task);
 }
