@@ -57,7 +57,7 @@ void BodyPong (void * arg)
 
 /*****************************************************/
 
-int context_test_main (int argc, char *argv[])
+int test_main (int argc, char *argv[])
 {
    char *stack ;
 

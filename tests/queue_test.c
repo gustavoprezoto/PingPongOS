@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "queue.h"
+#include "../include/queue.h"
 
 #define N 100
 
@@ -104,7 +104,7 @@ int fila_correta (filaint_t *fila)
 
 //------------------------------------------------------------------------------
 
-int testa_fila_main (int argc, char **argv, char **envp)
+int test_main (int argc, char **argv, char **envp)
 {
     int i ;
 

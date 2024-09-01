@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include "../../include/ppos.h"
 
+#define DEBUG 1
+
 task_t Ping, Pong ;
 
 // corpo da thread Ping
@@ -42,7 +44,7 @@ void BodyPong (void * arg)
     task_exit (0) ;
 }
 
-int main (int argc, char *argv[])
+int test_main (int argc, char *argv[])
 {
     printf ("main: inicio\n");
 
