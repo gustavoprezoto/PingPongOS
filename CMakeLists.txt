@@ -8,4 +8,5 @@ add_executable(PingPongOs src/main.c
         src/queue.c
         include/ppos_data.h
         include/ppos.h
+        src/ppos_core.c
 )
