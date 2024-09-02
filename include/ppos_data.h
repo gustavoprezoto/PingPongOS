@@ -11,8 +11,6 @@
 
 #define STACKSIZE 64*1024
 
-// #define DEBUG
-
 // Estrutura que define um Task Control Block (TCB)
 typedef struct task_t
 {
