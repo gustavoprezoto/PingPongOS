@@ -15,13 +15,6 @@
 #define RUNNING 1
 #define TERMINATED 2
 
-// Estrutura que define o estado de tasks
-// typedef enum task_state_t {
-//     READY,
-//     RUNNING,
-//     TERMINATED
-// } task_state_t;
-
 // Estrutura que define um Task Control Block (TCB)
 typedef struct task_t
 {
