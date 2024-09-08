@@ -11,13 +11,24 @@
 
 #define STACKSIZE 64*1024
 
+#define READY 0
+#define RUNNING 1
+#define TERMINATED 2
+
+// Estrutura que define o estado de tasks
+// typedef enum task_state_t {
+//     READY,
+//     RUNNING,
+//     TERMINATED
+// } task_state_t;
+
 // Estrutura que define um Task Control Block (TCB)
 typedef struct task_t
 {
     struct task_t *prev, *next ;		// ponteiros para usar em filas
     int id ;				// identificador da tarefa
     ucontext_t context ;			// contexto armazenado da tarefa
-    short status ;			// pronta = 0, rodando = 1, suspensa = 2, finalizada = 3...
+    int state ;			// pronta = 0, rodando = 1, suspensa = 2, finalizada = 3...
     // ... (outros campos serão adicionados mais tarde)
 } task_t ;
 

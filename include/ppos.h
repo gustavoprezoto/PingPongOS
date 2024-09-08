@@ -36,7 +36,7 @@ void ppos_init () ;
 
 // Inicializa uma nova tarefa. Retorna um ID> 0 ou erro.
 int task_init (task_t *task,			// descritor da nova tarefa
-               void  (*start_func)(void *),	// funcao corpo da tarefa
+               void  (*start_routine)(void *),	// funcao corpo da tarefa
                void   *arg) ;			// argumentos para a tarefa
 
 // retorna o identificador da tarefa corrente (main deve ser 0)

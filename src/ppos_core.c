@@ -3,20 +3,65 @@
 
 #include "../include/ppos.h"
 #include "../include/ppos_data.h"
+#include "../include/queue.h"
+#include "../include/logging.h"
 #include <ucontext.h>
 
-task_t main_task;
+task_t main_task, dispatcher_task;
 task_t *exec_task, *prev_task;
+task_t *task_queue;
+
 int tid;
+
+void dispatcher();
+void print_elem (void *ptr);
 
 void ppos_init() {
     // Desabilita o buffer do stdout, usado pelo printf, para previnir race conditions.
     setvbuf(stdout, 0, _IONBF, 0);
 
+    // Atribuição de valores à task principal
     tid = 0;
     main_task.id = tid;
 
     exec_task = &main_task;
+
+    // Criação da task dispatcher
+    task_init(&dispatcher_task, dispatcher, NULL);
+    queue_remove((queue_t**) &task_queue, (queue_t*) &dispatcher_task);
+}
+
+void task_yield() {
+    exec_task->state = READY;
+    queue_append((queue_t**) &task_queue, (queue_t*) &exec_task);
+    task_switch(&dispatcher_task);
+}
+
+task_t* scheduler() {
+    return task_queue;
+}
+
+void dispatcher(void *arg) {
+    // queue_print("queue:", (queue_t*) task_queue, print_elem);
+    while (queue_size((queue_t*) task_queue) > 0) {
+        task_t *next_task = scheduler();
+
+        if (next_task != NULL) {
+
+            if(next_task->state == READY) {
+                queue_remove((queue_t**) &task_queue, (queue_t*) next_task);
+                queue_append((queue_t**) &task_queue, (queue_t*) next_task);
+                task_switch(next_task);
+            }
+            else {
+                queue_print("queue:", (queue_t*) task_queue, print_elem);
+                log_debug("Next task is broken... Exiting it.");
+                task_exit(-1);
+            }
+        }
+    }
+
+    task_exit(0);
 }
 
 int task_init(task_t *task, void (*start_routine)(void *),  void *arg) {
@@ -38,9 +83,11 @@ int task_init(task_t *task, void (*start_routine)(void *),  void *arg) {
 
     tid++;
     task->id = tid;
-    task->status = 0;
+    task->state = READY;
 
     makecontext(&task->context, (void (*)(void))start_routine, 1, arg);
+
+    queue_append((queue_t**) &task_queue, (queue_t*) task);
 
     return tid;
 }
@@ -59,6 +106,8 @@ int task_switch(task_t *task) {
         return -1;
     }
 
+    // task->state = RUNNING; ?
+
     return 0;
 }
 
@@ -67,16 +116,27 @@ int task_id() {
 }
 
 void task_exit(int exit_code) {
-    if(exec_task == &main_task) {
-#ifdef DEBUG
-        printf("task_exit: tid 0 (main task). Retornando sem sair da task.\n");
-#endif
-        return;
-    }
+    exec_task->state = TERMINATED;
 
-#ifdef DEBUG
-    printf("task_exit: saindo da exec_task: %d para a task: %d.\n", exec_task->id, prev_task->id);
-#endif
-    task_switch(&main_task);
-    free(exec_task);
+    if(exec_task == &dispatcher_task) {
+        task_switch(&main_task);
+    }
+    else {
+        if(exec_task != &main_task) {
+            queue_remove((queue_t**) &task_queue, (queue_t*) exec_task);
+        }
+        task_switch(&dispatcher_task);
+    }
+}
+
+void print_elem (void *ptr)
+{
+    task_t *elem = ptr ;
+
+    if (!elem)
+        return ;
+
+    elem->prev ? printf ("%d", elem->prev->id) : printf ("*") ;
+    printf ("<%d>", elem->id) ;
+    elem->next ? printf ("%d", elem->next->id, elem->state) : printf ("*") ;
 }
