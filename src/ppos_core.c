@@ -10,6 +10,7 @@
 task_t main_task, dispatcher_task;
 task_t *exec_task, *prev_task;
 task_t *task_queue;
+task_t *free_task;
 
 int tid;
 
@@ -52,6 +53,11 @@ void dispatcher(void *arg) {
                 queue_remove((queue_t**) &task_queue, (queue_t*) next_task);
                 queue_append((queue_t**) &task_queue, (queue_t*) next_task);
                 task_switch(next_task);
+
+                if(free_task != NULL) {
+                    free(free_task->context.uc_stack.ss_sp);
+                    VALGRIND_STACK_DEREGISTER (free_task->vg_id);
+                }
             }
             else {
                 queue_print("queue:", (queue_t*) task_queue, print_elem);
@@ -85,10 +91,12 @@ int task_init(task_t *task, void (*start_routine)(void *),  void *arg) {
     task->id = tid;
     task->state = READY;
 
+    void* end = (char*)task->context.uc_stack.ss_sp + task->context.uc_stack.ss_size;
+    task->vg_id = VALGRIND_STACK_REGISTER (task->context.uc_stack.ss_sp, end);
+
     makecontext(&task->context, (void (*)(void))start_routine, 1, arg);
 
     queue_append((queue_t**) &task_queue, (queue_t*) task);
-
     return tid;
 }
 
@@ -117,6 +125,8 @@ int task_id() {
 
 void task_exit(int exit_code) {
     exec_task->state = TERMINATED;
+
+    free_task = exec_task;
 
     if(exec_task == &dispatcher_task) {
         task_switch(&main_task);

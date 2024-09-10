@@ -12,6 +12,9 @@
 // estruturas de dados necessárias neste projeto
 #include "ppos_data.h"
 
+// valgrind para mem debug
+#include <valgrind/valgrind.h>
+
 // macros importantes ==========================================================
 
 // habilita compatibilidade POSIX no MacOS X (para ucontext.h)

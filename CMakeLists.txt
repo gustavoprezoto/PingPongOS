@@ -21,5 +21,5 @@ add_executable(PingPongOs src/main.c
         # tests/ppos_tasks_tests/ppos_tasks2_test.c
         # tests/ppos_tasks_tests/ppos_tasks3_test.c
         # tests/debug_test.c
-         tests/dispatcher_tests/dispatcher_test.c
+        tests/dispatcher_tests/dispatcher_test.c
 )

@@ -22,7 +22,7 @@ typedef struct task_t
     int id ;				// identificador da tarefa
     ucontext_t context ;			// contexto armazenado da tarefa
     int state ;			// pronta = 0, rodando = 1, suspensa = 2, finalizada = 3...
-    // ... (outros campos serão adicionados mais tarde)
+    int vg_id;
 } task_t ;
 
 // estrutura que define um semáforo
