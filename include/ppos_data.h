@@ -11,18 +11,32 @@
 
 #define STACKSIZE 64*1024
 
+// Task state constants
 #define READY 0
 #define RUNNING 1
 #define TERMINATED 2
 
+// Task priority constants
+#define PRIORITY_MIN -20
+#define PRIORITY_MAX 20
+#define PRIORITY_AGING_FACTOR 1
+#define DYNAMIC_PRIORITY_BASE_VALUE 0
+
 // Estrutura que define um Task Control Block (TCB)
 typedef struct task_t
 {
-    struct task_t *prev, *next ;		// ponteiros para usar em filas
-    int id ;				// identificador da tarefa
-    ucontext_t context ;			// contexto armazenado da tarefa
-    int state ;			// pronta = 0, rodando = 1, suspensa = 2, finalizada = 3...
+    struct task_t *prev, *next ;
+    int id;
+    ucontext_t context;
+    int state;
+
+    // Valgrind ID (ignore)
     int vg_id;
+
+    int static_priority;
+    int dynamic_priority;
+
+
 } task_t ;
 
 // estrutura que define um semáforo
