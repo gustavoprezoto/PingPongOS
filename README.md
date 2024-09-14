@@ -14,7 +14,7 @@ Os seguintes conteúdos já foram desenvolvidos para o projeto:
 - [X] Trocas de contexto
 - [X] Gestão de tarefas
 - [X] Dispatcher
-- [ ] Escalonador por prioridades
+- [X] Escalonador por prioridades
 - [ ] Preempção por tempo
 - [ ] Contabilização
 - [ ] Tarefa main
