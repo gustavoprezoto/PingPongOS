@@ -90,6 +90,7 @@ void dispatcher(void *arg) {
                 if(free_task != NULL) {
                     free(free_task->context.uc_stack.ss_sp);
                     VALGRIND_STACK_DEREGISTER (free_task->vg_id);
+                    free_task = NULL;
                 }
             }
             else {
