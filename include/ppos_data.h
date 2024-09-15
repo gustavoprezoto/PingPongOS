@@ -12,9 +12,9 @@
 #define STACKSIZE 64*1024
 
 // Task state constants
-#define READY 0
-#define RUNNING 1
-#define TERMINATED 2
+#define STATE_READY 0
+#define STATE_RUNNING 1
+#define STATE_TERMINATED 2
 
 // Task priority constants
 #define PRIORITY_MIN -20

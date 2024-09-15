@@ -35,7 +35,7 @@ void ppos_init() {
 }
 
 void task_yield() {
-    exec_task->state = READY;
+    exec_task->state = STATE_READY;
     queue_append((queue_t**) &task_queue, (queue_t*) &exec_task);
     task_switch(&dispatcher_task);
 }
@@ -82,7 +82,7 @@ void dispatcher(void *arg) {
 
         if (next_task != NULL) {
 
-            if(next_task->state == READY) {
+            if(next_task->state == STATE_READY) {
                 queue_remove((queue_t**) &task_queue, (queue_t*) next_task);
                 queue_append((queue_t**) &task_queue, (queue_t*) next_task);
                 task_switch(next_task);
@@ -123,7 +123,7 @@ int task_init(task_t *task, void (*start_routine)(void *),  void *arg) {
 
     tid++;
     task->id = tid;
-    task->state = READY;
+    task->state = STATE_READY;
     task_setprio(task, 0);
     task_set_base_dynamic_priority(task);
 
@@ -181,7 +181,7 @@ int task_getprio (task_t *task) {
 }
 
 void task_exit(int exit_code) {
-    exec_task->state = TERMINATED;
+    exec_task->state = STATE_TERMINATED;
 
     free_task = exec_task;
 
