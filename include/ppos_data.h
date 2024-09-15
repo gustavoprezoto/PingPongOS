@@ -22,6 +22,15 @@
 #define PRIORITY_AGING_FACTOR 1
 #define DYNAMIC_PRIORITY_BASE_VALUE 0
 
+// Preemption constants
+#define PPOS_TIMER_INTERVAL_USEC 1000
+#define PPOS_QUANTUM_BASE_VALUE 20
+#define PPOS_QUANTUM_LOSS_FACTOR_PER_TICK 1
+#define PPOS_QUANTUM_MIN_VALUE 0
+#define PPOS_QUANTUM_MAX_VALUE 20
+#define PPOS_ROUTINE_EXECUTING 1
+#define PPOS_ROUTINE_NOT_EXECUTING 0
+
 // Estrutura que define um Task Control Block (TCB)
 typedef struct task_t
 {
@@ -29,14 +38,12 @@ typedef struct task_t
     int id;
     ucontext_t context;
     int state;
+    int static_priority;
+    int dynamic_priority;
+    int quantum;
 
     // Valgrind ID (ignore)
     int vg_id;
-
-    int static_priority;
-    int dynamic_priority;
-
-
 } task_t ;
 
 // estrutura que define um semáforo

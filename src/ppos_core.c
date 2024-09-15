@@ -6,18 +6,34 @@
 #include "../include/queue.h"
 #include "../include/logging.h"
 #include <ucontext.h>
+#include <signal.h>
+#include <sys/time.h>
 
+// Important tasks
 task_t main_task, dispatcher_task;
 task_t *exec_task, *prev_task;
 task_t *task_queue;
 task_t *free_task;
 
-int tid;
+int tid; // taskId
+
+
+// Time preemption global variables and macros
+struct itimerval preemption_timer;
+struct sigaction timer_action;
+int executing_ppos_routine;
+#define START_EXECUTING_INTERNAL_PPOS_ROUTINE() (executing_ppos_routine = PPOS_ROUTINE_EXECUTING)
+#define STOP_EXECUTING_INTERNAL_PPOS_ROUTINE()  (executing_ppos_routine = PPOS_ROUTINE_NOT_EXECUTING)
+
+void start_time_preemption();
+void time_preemption_handler(int signum);
 
 void dispatcher();
-void print_elem (void *ptr);
+
 void age_task_dynamic_priority(task_t *task);
 void task_set_base_dynamic_priority(task_t *task);
+
+void print_elem (void *ptr);
 
 void ppos_init() {
     // Desabilita o buffer do stdout, usado pelo printf, para previnir race conditions.
@@ -27,11 +43,15 @@ void ppos_init() {
     tid = 0;
     main_task.id = tid;
 
+    start_time_preemption();
+
+    // Set current exec task as main task
     exec_task = &main_task;
 
     // Criação da task dispatcher
     task_init(&dispatcher_task, dispatcher, NULL);
     queue_remove((queue_t**) &task_queue, (queue_t*) &dispatcher_task);
+
 }
 
 void task_yield() {
@@ -52,7 +72,8 @@ task_t* scheduler() {
         queue_iterator = queue_iterator->next;
     } while (queue_iterator != task_queue);
 
-    task_set_base_dynamic_priority(next_scheduled_task);
+    next_scheduled_task->dynamic_priority = DYNAMIC_PRIORITY_BASE_VALUE;
+    next_scheduled_task->quantum = PPOS_QUANTUM_BASE_VALUE;
 
     // Iterate the task queue again to apply age factor to enqueued tasks
     queue_iterator = task_queue;
@@ -76,6 +97,7 @@ void task_set_base_dynamic_priority(task_t *task) {
 }
 
 void dispatcher(void *arg) {
+
     // queue_print("queue:", (queue_t*) task_queue, print_elem);
     while (queue_size((queue_t*) task_queue) > 0) {
         task_t *next_task = scheduler();
@@ -125,7 +147,7 @@ int task_init(task_t *task, void (*start_routine)(void *),  void *arg) {
     task->id = tid;
     task->state = STATE_READY;
     task_setprio(task, 0);
-    task_set_base_dynamic_priority(task);
+    task->dynamic_priority = DYNAMIC_PRIORITY_BASE_VALUE;
 
     void* end = (char*)task->context.uc_stack.ss_sp + task->context.uc_stack.ss_size;
     task->vg_id = VALGRIND_STACK_REGISTER (task->context.uc_stack.ss_sp, end);
@@ -196,6 +218,43 @@ void task_exit(int exit_code) {
     }
 }
 
+void start_time_preemption() {
+    // Set timer
+    preemption_timer.it_value.tv_usec = PPOS_TIMER_INTERVAL_USEC; // ?
+    preemption_timer.it_value.tv_sec  = 0;
+    preemption_timer.it_interval.tv_usec = PPOS_TIMER_INTERVAL_USEC;
+    preemption_timer.it_interval.tv_sec  = 0;
+    if (setitimer (ITIMER_REAL, &preemption_timer, 0) < 0)
+    {
+        perror("setitimer failed");
+        task_exit(-3);
+    }
+
+    // Set timer handler
+    timer_action.sa_handler = time_preemption_handler;
+    sigemptyset(&timer_action.sa_mask);
+    timer_action.sa_flags = 0;
+    if (sigaction (SIGALRM, &timer_action, 0) < 0)
+    {
+        perror ("Erro em sigaction: ") ;
+        exit (1) ;
+    }
+}
+
+void time_preemption_handler(int signum) {
+    if(exec_task != &dispatcher_task) {
+        if(exec_task == NULL) {
+            perror("exec_task is NULL lol");
+            task_exit(-4);
+        }
+
+        exec_task->quantum -= PPOS_QUANTUM_LOSS_FACTOR_PER_TICK;
+        if (exec_task->quantum <= 0) {
+            task_yield();
+        }
+    }
+}
+
 void print_elem (void *ptr)
 {
     task_t *elem = ptr ;
@@ -205,5 +264,5 @@ void print_elem (void *ptr)
 
     elem->prev ? printf ("%d", elem->prev->id) : printf ("*") ;
     printf ("<%d>", elem->id) ;
-    elem->next ? printf ("%d", elem->next->id, elem->state) : printf ("*") ;
+    elem->next ? printf ("%d", elem->next->id) : printf ("*") ;
 }
