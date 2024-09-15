@@ -15,9 +15,9 @@ Os seguintes conteúdos já foram desenvolvidos para o projeto:
 - [X] Gestão de tarefas
 - [X] Dispatcher
 - [X] Escalonador por prioridades
-- [ ] Preempção por tempo
+- [X] Preempção por tempo
 - [ ] Contabilização
-- [ ] Tarefa main
+- [x] ~~Tarefa main~~
 - [ ] Tarefas suspensas
 - [ ] Tarefas dormindo
 - [ ] Semáforos
