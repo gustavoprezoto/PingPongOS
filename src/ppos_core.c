@@ -17,13 +17,9 @@ task_t *free_task;
 
 int tid; // taskId
 
-
 // Time preemption global variables and macros
 struct itimerval preemption_timer;
 struct sigaction timer_action;
-int executing_ppos_routine;
-#define START_EXECUTING_INTERNAL_PPOS_ROUTINE() (executing_ppos_routine = PPOS_ROUTINE_EXECUTING)
-#define STOP_EXECUTING_INTERNAL_PPOS_ROUTINE()  (executing_ppos_routine = PPOS_ROUTINE_NOT_EXECUTING)
 
 void start_time_preemption();
 void time_preemption_handler(int signum);

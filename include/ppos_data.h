@@ -28,8 +28,6 @@
 #define PPOS_QUANTUM_LOSS_FACTOR_PER_TICK 1
 #define PPOS_QUANTUM_MIN_VALUE 0
 #define PPOS_QUANTUM_MAX_VALUE 20
-#define PPOS_ROUTINE_EXECUTING 1
-#define PPOS_ROUTINE_NOT_EXECUTING 0
 
 // Estrutura que define um Task Control Block (TCB)
 typedef struct task_t
