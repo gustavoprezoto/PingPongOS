@@ -29,9 +29,14 @@
 #define PPOS_QUANTUM_MIN_VALUE 0
 #define PPOS_QUANTUM_MAX_VALUE 20
 
-// Estrutura que define um Task Control Block (TCB)
-typedef struct task_t
-{
+typedef struct task_metrics_t {
+    int execution_time;
+    int cpu_time;
+    int activation;
+} task_metrics_t;
+
+// Task Control Block (TCB)
+typedef struct task_t {
     struct task_t *prev, *next ;
     int id;
     ucontext_t context;
@@ -39,6 +44,7 @@ typedef struct task_t
     int static_priority;
     int dynamic_priority;
     int quantum;
+    task_metrics_t metrics;
 
     // Valgrind ID (ignore)
     int vg_id;

@@ -15,11 +15,12 @@ task_t *exec_task, *prev_task;
 task_t *task_queue;
 task_t *free_task;
 
-int tid; // taskId
+int task_id_counter;
 
-// Time preemption global variables and macros
+// Time preemption global variables/pointer and macros
 struct itimerval preemption_timer;
-struct sigaction timer_action;
+struct sigaction *preemption_timer_handler;
+struct sigaction *metrics_timer_handler;
 
 void start_time_preemption();
 void time_preemption_handler(int signum);
@@ -32,19 +33,18 @@ void task_set_base_dynamic_priority(task_t *task);
 void print_elem (void *ptr);
 
 void ppos_init() {
-    // Desabilita o buffer do stdout, usado pelo printf, para previnir race conditions.
+    // Disabling stdout buffer to prevent race conditions on printf
     setvbuf(stdout, 0, _IONBF, 0);
 
-    // Atribuição de valores à task principal
-    tid = 0;
-    main_task.id = tid;
+    // Starting global variables
+    task_id_counter = 0;
+    main_task.id = task_id_counter;
 
     start_time_preemption();
 
-    // Set current exec task as main task
     exec_task = &main_task;
 
-    // Criação da task dispatcher
+    // Dispatcher task creation
     task_init(&dispatcher_task, dispatcher, NULL);
     queue_remove((queue_t**) &task_queue, (queue_t*) &dispatcher_task);
 
@@ -125,6 +125,7 @@ void dispatcher(void *arg) {
 int task_init(task_t *task, void (*start_routine)(void *),  void *arg) {
     char *stack;
 
+    // Creating task context
     getcontext(&task->context);
 
     stack = malloc(STACKSIZE);
@@ -133,25 +134,31 @@ int task_init(task_t *task, void (*start_routine)(void *),  void *arg) {
         perror("malloc failed");
         exit(-1);
     }
-
     task->context.uc_stack.ss_sp = stack;
     task->context.uc_stack.ss_size = STACKSIZE;
     task->context.uc_stack.ss_flags = 0;
     task->context.uc_link = 0;
 
-    tid++;
-    task->id = tid;
+    makecontext(&task->context, (void (*)(void))start_routine, 1, arg);
+
+    // Starting base task_t members
+    task_id_counter++;
+
+    task->id = task_id_counter;
     task->state = STATE_READY;
     task_setprio(task, 0);
     task->dynamic_priority = DYNAMIC_PRIORITY_BASE_VALUE;
+    task->metrics.activation = 0;
+    task->metrics.cpu_time = 0;
+    task->metrics.execution_time = 0;
 
+    // Valgrind stuff
     void* end = (char*)task->context.uc_stack.ss_sp + task->context.uc_stack.ss_size;
-    task->vg_id = VALGRIND_STACK_REGISTER (task->context.uc_stack.ss_sp, end);
-
-    makecontext(&task->context, (void (*)(void))start_routine, 1, arg);
+    task->vg_id = VALGRIND_STACK_REGISTER(task->context.uc_stack.ss_sp, end);
 
     queue_append((queue_t**) &task_queue, (queue_t*) task);
-    return tid;
+
+    return task->id;
 }
 
 int task_switch(task_t *task) {
@@ -214,6 +221,22 @@ void task_exit(int exit_code) {
     }
 }
 
+struct sigaction* create_SIGALRM_handler(void (*handler)(int)) {
+    struct sigaction *action_p = malloc(sizeof(struct sigaction));
+
+    action_p->sa_handler = handler;
+    sigemptyset(&action_p->sa_mask);
+    action_p->sa_flags = 0;
+
+    if (sigaction (SIGALRM, action_p, 0) < 0)
+    {
+        perror ("error creating SIGALARM handler") ;
+        exit (1) ;
+    }
+
+    return action_p;
+}
+
 void start_time_preemption() {
     // Set timer
     preemption_timer.it_value.tv_usec = PPOS_TIMER_INTERVAL_USEC; // ?
@@ -226,15 +249,9 @@ void start_time_preemption() {
         task_exit(-3);
     }
 
-    // Set timer handler
-    timer_action.sa_handler = time_preemption_handler;
-    sigemptyset(&timer_action.sa_mask);
-    timer_action.sa_flags = 0;
-    if (sigaction (SIGALRM, &timer_action, 0) < 0)
-    {
-        perror ("Erro em sigaction: ") ;
-        exit (1) ;
-    }
+    // Create timer handlers (preemption and task clock)
+    preemption_timer_handler = create_SIGALRM_handler(time_preemption_handler);
+    metrics_timer_handler = create_SIGALRM_handler(time_preemption_handler);
 }
 
 void time_preemption_handler(int signum) {
