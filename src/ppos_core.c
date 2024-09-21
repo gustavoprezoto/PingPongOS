@@ -28,7 +28,6 @@ void time_preemption_handler(int signum);
 void dispatcher();
 
 void age_task_dynamic_priority(task_t *task);
-void task_set_base_dynamic_priority(task_t *task);
 
 void print_elem (void *ptr);
 
@@ -86,10 +85,6 @@ task_t* scheduler() {
 void age_task_dynamic_priority(task_t *task) {
     if (task->dynamic_priority != PRIORITY_MIN)
         task->dynamic_priority -= PRIORITY_AGING_FACTOR;
-}
-
-void task_set_base_dynamic_priority(task_t *task) {
-    task->dynamic_priority = DYNAMIC_PRIORITY_BASE_VALUE;
 }
 
 void dispatcher(void *arg) {
