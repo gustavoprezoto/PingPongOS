@@ -11,7 +11,7 @@
 
 // Important tasks
 task_t main_task, dispatcher_task;
-task_t *exec_task, *prev_task;
+task_t *current_exec_task, *prev_task;
 task_t *task_queue;
 task_t *free_task;
 
@@ -41,7 +41,7 @@ void ppos_init() {
 
     start_time_preemption();
 
-    exec_task = &main_task;
+    current_exec_task = &main_task;
 
     // Dispatcher task creation
     task_init(&dispatcher_task, dispatcher, NULL);
@@ -50,8 +50,8 @@ void ppos_init() {
 }
 
 void task_yield() {
-    exec_task->state = STATE_READY;
-    queue_append((queue_t**) &task_queue, (queue_t*) &exec_task);
+    current_exec_task->state = STATE_READY;
+    queue_append((queue_t**) &task_queue, (queue_t*) &current_exec_task);
     task_switch(&dispatcher_task);
 }
 
@@ -157,8 +157,8 @@ int task_init(task_t *task, void (*start_routine)(void *),  void *arg) {
 }
 
 int task_switch(task_t *task) {
-    prev_task = exec_task;
-    exec_task = task;
+    prev_task = current_exec_task;
+    current_exec_task = task;
 
 #ifdef DEBUG
     printf("task_switch: trocando a task %d pela task %d.\n", prev_task->id, task->id);
@@ -166,7 +166,7 @@ int task_switch(task_t *task) {
 
     if (swapcontext(&prev_task->context, &task->context) < 0) {
         perror("Erro na troca de contexto: ");
-        exec_task = prev_task;
+        current_exec_task = prev_task;
         return -1;
     }
 
@@ -176,12 +176,12 @@ int task_switch(task_t *task) {
 }
 
 int task_id() {
-    return exec_task->id;
+    return current_exec_task->id;
 }
 
 void task_setprio (task_t *task, int prio) {
     if(task == NULL)
-        task = exec_task;
+        task = current_exec_task;
 
     if(prio > PRIORITY_MAX)
         prio = PRIORITY_MAX;
@@ -195,22 +195,22 @@ void task_setprio (task_t *task, int prio) {
 
 int task_getprio (task_t *task) {
     if (task == NULL)
-        task = exec_task;
+        task = current_exec_task;
 
     return task->static_priority + task->dynamic_priority;
 }
 
 void task_exit(int exit_code) {
-    exec_task->state = STATE_TERMINATED;
+    current_exec_task->state = STATE_TERMINATED;
 
-    free_task = exec_task;
+    free_task = current_exec_task;
 
-    if(exec_task == &dispatcher_task) {
+    if(current_exec_task == &dispatcher_task) {
         task_switch(&main_task);
     }
     else {
-        if(exec_task != &main_task) {
-            queue_remove((queue_t**) &task_queue, (queue_t*) exec_task);
+        if(current_exec_task != &main_task) {
+            queue_remove((queue_t**) &task_queue, (queue_t*) current_exec_task);
         }
         task_switch(&dispatcher_task);
     }
@@ -250,14 +250,14 @@ void start_time_preemption() {
 }
 
 void time_preemption_handler(int signum) {
-    if(exec_task != &dispatcher_task) {
-        if(exec_task == NULL) {
+    if(current_exec_task != &dispatcher_task) {
+        if(current_exec_task == NULL) {
             perror("exec_task is NULL lol");
             task_exit(-4);
         }
 
-        exec_task->quantum -= PPOS_QUANTUM_LOSS_FACTOR_PER_TICK;
-        if (exec_task->quantum <= 0) {
+        current_exec_task->quantum -= PPOS_QUANTUM_LOSS_FACTOR_PER_TICK;
+        if (current_exec_task->quantum <= 0) {
             task_yield();
         }
     }
