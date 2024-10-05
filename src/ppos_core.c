@@ -12,7 +12,7 @@
 // Important tasks
 task_t main_task, dispatcher_task;
 task_t *current_exec_task, *prev_task;
-task_t *task_queue;
+task_t *active_task_queue, *suspended_task_queue;
 task_t *free_task;
 
 int task_id_counter;
@@ -52,19 +52,19 @@ void ppos_init() {
 
     // Dispatcher task creation
     task_init(&dispatcher_task, dispatcher, NULL);
-    queue_remove((queue_t**) &task_queue, (queue_t*) &dispatcher_task);
+    queue_remove((queue_t**) &active_task_queue, (queue_t*) &dispatcher_task);
 
 }
 
 void task_yield() {
     current_exec_task->state = STATE_READY;
-    queue_append((queue_t**) &task_queue, (queue_t*) &current_exec_task);
+    queue_append((queue_t**) &active_task_queue, (queue_t*) &current_exec_task);
     task_switch(&dispatcher_task);
 }
 
 task_t* scheduler() {
-    task_t *queue_iterator = task_queue;
-    task_t *next_scheduled_task = task_queue; // iteration strategy purposes
+    task_t *queue_iterator = active_task_queue;
+    task_t *next_scheduled_task = active_task_queue; // iteration strategy purposes
 
     // Iterate the task queue to find the next scheduled task
     do {
@@ -72,19 +72,19 @@ task_t* scheduler() {
             next_scheduled_task = queue_iterator;
 
         queue_iterator = queue_iterator->next;
-    } while (queue_iterator != task_queue);
+    } while (queue_iterator != active_task_queue);
 
     next_scheduled_task->dynamic_priority = DYNAMIC_PRIORITY_BASE_VALUE;
     next_scheduled_task->quantum = PPOS_QUANTUM_BASE_VALUE;
 
     // Iterate the task queue again to apply age factor to enqueued tasks
-    queue_iterator = task_queue;
+    queue_iterator = active_task_queue;
     do {
         if(queue_iterator != next_scheduled_task)
             age_task_dynamic_priority(queue_iterator);
 
         queue_iterator = queue_iterator->next;
-    } while (queue_iterator != task_queue);
+    } while (queue_iterator != active_task_queue);
 
     return next_scheduled_task;
 }
@@ -97,14 +97,14 @@ void age_task_dynamic_priority(task_t *task) {
 void dispatcher(void *arg) {
 
     // queue_print("queue:", (queue_t*) task_queue, print_elem);
-    while (queue_size((queue_t*) task_queue) > 0) {
+    while (queue_size((queue_t*) active_task_queue) > 0) {
         task_t *next_task = scheduler();
 
         if (next_task != NULL) {
 
             if(next_task->state == STATE_READY) {
-                queue_remove((queue_t**) &task_queue, (queue_t*) next_task);
-                queue_append((queue_t**) &task_queue, (queue_t*) next_task);
+                queue_remove((queue_t**) &active_task_queue, (queue_t*) next_task);
+                queue_append((queue_t**) &active_task_queue, (queue_t*) next_task);
                 task_switch(next_task);
 
                 // it should be here to not deference and cause a null pointer in exit_task
@@ -115,7 +115,7 @@ void dispatcher(void *arg) {
                 }
             }
             else {
-                queue_print("queue:", (queue_t*) task_queue, print_elem);
+                queue_print("queue:", (queue_t*) active_task_queue, print_elem);
                 log_debug("Next task is broken... Exiting it.");
                 task_exit(-1);
             }
@@ -161,7 +161,7 @@ int task_init(task_t *task, void (*start_routine)(void *),  void *arg) {
     void* end = (char*)task->context.uc_stack.ss_sp + task->context.uc_stack.ss_size;
     task->vg_id = VALGRIND_STACK_REGISTER(task->context.uc_stack.ss_sp, end);
 
-    queue_append((queue_t**) &task_queue, (queue_t*) task);
+    queue_append((queue_t**) &active_task_queue, (queue_t*) task);
 
     return task->id;
 }
@@ -224,7 +224,7 @@ void task_exit(int exit_code) {
     }
     else {
         if(current_exec_task != &main_task) {
-            queue_remove((queue_t**) &task_queue, (queue_t*) current_exec_task);
+            queue_remove((queue_t**) &active_task_queue, (queue_t*) current_exec_task);
             // finish_task_metrics(current_exec_task);
         }
         task_switch(&dispatcher_task);
