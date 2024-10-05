@@ -116,7 +116,6 @@ void dispatcher(void *arg) {
             }
             else {
                 queue_print("queue:", (queue_t*) active_task_queue, print_elem);
-                log_debug("Next task is broken... Exiting it.");
                 task_exit(-1);
             }
         }
@@ -169,10 +168,6 @@ int task_init(task_t *task, void (*start_routine)(void *),  void *arg) {
 int task_switch(task_t *task) {
     prev_task = current_exec_task;
     current_exec_task = task;
-
-#ifdef DEBUG
-    printf("task_switch: trocando a task %d pela task %d.\n", prev_task->id, task->id);
-#endif
 
     if (swapcontext(&prev_task->context, &task->context) < 0) {
         perror("Erro na troca de contexto: ");
