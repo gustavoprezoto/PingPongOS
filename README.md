@@ -16,7 +16,7 @@ Os seguintes conteúdos já foram desenvolvidos para o projeto:
 - [X] Dispatcher
 - [X] Escalonador por prioridades
 - [X] Preempção por tempo
-- [ ] Contabilização
+- [X] Contabilização
 - [x] ~~Tarefa main~~
 - [ ] Tarefas suspensas
 - [ ] Tarefas dormindo
