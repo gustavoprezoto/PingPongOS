@@ -16,10 +16,11 @@ task_t *task_queue;
 task_t *free_task;
 
 int task_id_counter;
+volatile unsigned int ppos_systime;
 
 // Time preemption global variables/pointer and macros
 struct itimerval preemption_timer;
-struct sigaction *preemption_timer_handler;
+volatile struct sigaction *preemption_timer_handler;
 struct sigaction *metrics_timer_handler;
 
 void start_time_preemption();
@@ -31,6 +32,11 @@ void age_task_dynamic_priority(task_t *task);
 
 void print_elem (void *ptr);
 
+void update_global_metrics_timer();
+void finish_task_metrics(task_t *task);
+
+void print_task_metrics(task_t *task);
+
 void ppos_init() {
     // Disabling stdout buffer to prevent race conditions on printf
     setvbuf(stdout, 0, _IONBF, 0);
@@ -38,6 +44,7 @@ void ppos_init() {
     // Starting global variables
     task_id_counter = 0;
     main_task.id = task_id_counter;
+    ppos_systime = 0;
 
     start_time_preemption();
 
@@ -100,6 +107,7 @@ void dispatcher(void *arg) {
                 queue_append((queue_t**) &task_queue, (queue_t*) next_task);
                 task_switch(next_task);
 
+                // it should be here to not deference and cause a null pointer in exit_task
                 if(free_task != NULL) {
                     free(free_task->context.uc_stack.ss_sp);
                     VALGRIND_STACK_DEREGISTER (free_task->vg_id);
@@ -146,6 +154,8 @@ int task_init(task_t *task, void (*start_routine)(void *),  void *arg) {
     task->metrics.activation = 0;
     task->metrics.cpu_time = 0;
     task->metrics.execution_time = 0;
+    task->metrics.execution_start = systime();
+    task->metrics.execution_end = NULL;
 
     // Valgrind stuff
     void* end = (char*)task->context.uc_stack.ss_sp + task->context.uc_stack.ss_size;
@@ -171,6 +181,7 @@ int task_switch(task_t *task) {
     }
 
     // task->state = RUNNING; ?
+    task->metrics.activation++;
 
     return 0;
 }
@@ -205,12 +216,16 @@ void task_exit(int exit_code) {
 
     free_task = current_exec_task;
 
+    finish_task_metrics(current_exec_task);
+    print_task_metrics(current_exec_task);
+
     if(current_exec_task == &dispatcher_task) {
         task_switch(&main_task);
     }
     else {
         if(current_exec_task != &main_task) {
             queue_remove((queue_t**) &task_queue, (queue_t*) current_exec_task);
+            // finish_task_metrics(current_exec_task);
         }
         task_switch(&dispatcher_task);
     }
@@ -246,10 +261,11 @@ void start_time_preemption() {
 
     // Create timer handlers (preemption and task clock)
     preemption_timer_handler = create_SIGALRM_handler(time_preemption_handler);
-    metrics_timer_handler = create_SIGALRM_handler(time_preemption_handler);
 }
 
 void time_preemption_handler(int signum) {
+    update_global_metrics_timer();
+
     if(current_exec_task != &dispatcher_task) {
         if(current_exec_task == NULL) {
             perror("exec_task is NULL lol");
@@ -263,9 +279,24 @@ void time_preemption_handler(int signum) {
     }
 }
 
+void update_global_metrics_timer() {
+    ppos_systime++;
+
+    current_exec_task->metrics.cpu_time++;
+}
+
+void finish_task_metrics(task_t *task) {
+    task->metrics.execution_end = systime();
+    task->metrics.execution_time = task->metrics.execution_end - task->metrics.execution_start;
+}
+
+unsigned int systime() {
+    return ppos_systime;
+}
+
 void print_elem (void *ptr)
 {
-    task_t *elem = ptr ;
+    task_t *elem = ptr;
 
     if (!elem)
         return ;
@@ -273,4 +304,9 @@ void print_elem (void *ptr)
     elem->prev ? printf ("%d", elem->prev->id) : printf ("*") ;
     printf ("<%d>", elem->id) ;
     elem->next ? printf ("%d", elem->next->id) : printf ("*") ;
+}
+
+void print_task_metrics(task_t *task) {
+    printf("Task %d: execution time %d ms, processor time %d ms, %d activations\n",
+        task->id, task->metrics.execution_time, task->metrics.cpu_time, task->metrics.activation);
 }

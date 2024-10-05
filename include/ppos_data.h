@@ -33,6 +33,8 @@ typedef struct task_metrics_t {
     int execution_time;
     int cpu_time;
     int activation;
+    int execution_start;
+    int execution_end;
 } task_metrics_t;
 
 // Task Control Block (TCB)
