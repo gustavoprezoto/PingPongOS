@@ -37,6 +37,12 @@ void finish_task_metrics(task_t *task);
 
 void print_task_metrics(task_t *task);
 
+void task_suspend(task_t **queue);
+void task_awake(task_t * task, task_t **queue);
+void __awake_tasks(task_t *core_task);
+
+void *__safe_malloc(size_t size);
+
 void ppos_init() {
     // Disabling stdout buffer to prevent race conditions on printf
     setvbuf(stdout, 0, _IONBF, 0);
@@ -48,12 +54,13 @@ void ppos_init() {
 
     start_time_preemption();
 
+    queue_append((queue_t**) &active_task_queue, (queue_t*) &main_task);
+
     current_exec_task = &main_task;
 
     // Dispatcher task creation
     task_init(&dispatcher_task, dispatcher, NULL);
     queue_remove((queue_t**) &active_task_queue, (queue_t*) &dispatcher_task);
-
 }
 
 void task_yield() {
@@ -96,8 +103,8 @@ void age_task_dynamic_priority(task_t *task) {
 
 void dispatcher(void *arg) {
 
-    // queue_print("queue:", (queue_t*) task_queue, print_elem);
     while (queue_size((queue_t*) active_task_queue) > 0) {
+        // queue_print("queue:", (queue_t*) active_task_queue, print_elem);
         task_t *next_task = scheduler();
 
         if (next_task != NULL) {
@@ -208,6 +215,7 @@ int task_getprio (task_t *task) {
 
 void task_exit(int exit_code) {
     current_exec_task->state = STATE_TERMINATED;
+    current_exec_task->exit_code = exit_code;
 
     free_task = current_exec_task;
 
@@ -218,11 +226,24 @@ void task_exit(int exit_code) {
         task_switch(&main_task);
     }
     else {
+        __awake_tasks(current_exec_task);
         if(current_exec_task != &main_task) {
             queue_remove((queue_t**) &active_task_queue, (queue_t*) current_exec_task);
             // finish_task_metrics(current_exec_task);
         }
         task_switch(&dispatcher_task);
+    }
+}
+
+void __awake_tasks(task_t *core_task) {
+    if(core_task->waiting_queue != NULL) {
+        task_t *queue_iterator = *core_task->waiting_queue;
+
+        if(queue_iterator != NULL) {
+            do {
+                task_awake(queue_iterator, core_task->waiting_queue);
+            } while (queue_iterator->next != NULL);
+        }
     }
 }
 
@@ -268,6 +289,11 @@ void time_preemption_handler(int signum) {
         }
 
         current_exec_task->quantum -= PPOS_QUANTUM_LOSS_FACTOR_PER_TICK;
+        // if(current_exec_task != &main_task) {
+        //     if (current_exec_task->quantum <= 0) {
+        //         task_yield();
+        //     }
+        // }
         if (current_exec_task->quantum <= 0) {
             task_yield();
         }
@@ -289,6 +315,60 @@ unsigned int systime() {
     return ppos_systime;
 }
 
+void print_task_metrics(task_t *task) {
+    printf("Task %d: execution time %d ms, processor time %d ms, %d activations\n",
+        task->id, task->metrics.execution_time, task->metrics.cpu_time, task->metrics.activation);
+}
+
+int task_wait (task_t *task) {
+    if(task->state == STATE_TERMINATED) {
+        return task->exit_code;
+    }
+
+    // Initializing waiting queue
+    if (task->waiting_queue == NULL) {
+        task->waiting_queue = (task_t **) __safe_malloc(sizeof(task_t *));
+        *task->waiting_queue = NULL;
+    }
+
+    task_suspend(task->waiting_queue);
+
+    return task->exit_code;
+}
+
+void *__safe_malloc(size_t size) {
+    void *ptr = malloc(size);
+    if (ptr == NULL) {
+        fprintf(stderr, "Erro: Falha ao alocar memória.\n");
+        exit(EXIT_FAILURE);
+    }
+    return ptr;
+}
+
+void task_suspend(task_t **queue) {
+
+    queue_remove((queue_t**) &active_task_queue, (queue_t*) current_exec_task);
+
+    current_exec_task->state = STATE_SUSPENDED;
+
+    queue_append((queue_t**) queue, (queue_t*) current_exec_task);
+
+    task_switch(&dispatcher_task);
+    // task_yield();
+}
+
+void task_awake(task_t *task, task_t **queue) {
+    if(queue != NULL) {
+        queue_remove((queue_t**) queue, (queue_t*) task);
+
+        task->state = STATE_READY;
+        queue_append((queue_t**) &active_task_queue, (queue_t*) task);
+    } else {
+        // it should not be here!
+        // todo: add debug here
+    }
+}
+
 void print_elem (void *ptr)
 {
     task_t *elem = ptr;
@@ -299,9 +379,4 @@ void print_elem (void *ptr)
     elem->prev ? printf ("%d", elem->prev->id) : printf ("*") ;
     printf ("<%d>", elem->id) ;
     elem->next ? printf ("%d", elem->next->id) : printf ("*") ;
-}
-
-void print_task_metrics(task_t *task) {
-    printf("Task %d: execution time %d ms, processor time %d ms, %d activations\n",
-        task->id, task->metrics.execution_time, task->metrics.cpu_time, task->metrics.activation);
 }
