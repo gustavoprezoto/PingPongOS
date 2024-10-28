@@ -15,6 +15,8 @@
 #define STATE_READY 0
 #define STATE_RUNNING 1
 #define STATE_TERMINATED 2
+#define STATE_SUSPENDED 3
+#define STATE_SLEEPING 4
 
 // Task priority constants
 #define PRIORITY_MIN -20
@@ -39,18 +41,24 @@ typedef struct task_metrics_t {
 
 // Task Control Block (TCB)
 typedef struct task_t {
-    struct task_t *prev, *next ;
+    struct task_t *prev, *next;
+
     int id;
     ucontext_t context;
     int state;
+
     int static_priority;
     int dynamic_priority;
     int quantum;
+
+    struct task_t **waiting_queue; // Queue used for storing suspended tasks
+    int exit_code;
+
     task_metrics_t metrics;
 
-    // Valgrind ID (ignore)
+    // Valgrind ID (ignore) | used for memory debug
     int vg_id;
-} task_t ;
+} task_t;
 
 // estrutura que define um semáforo
 typedef struct
