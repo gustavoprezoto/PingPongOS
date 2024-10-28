@@ -17,8 +17,8 @@ Os seguintes conteúdos já foram desenvolvidos para o projeto:
 - [X] Escalonador por prioridades
 - [X] Preempção por tempo
 - [X] Contabilização
-- [x] ~~Tarefa main~~
-- [ ] Tarefas suspensas
+- [X] ~~Tarefa main~~
+- [X] Tarefas suspensas
 - [ ] Tarefas dormindo
 - [ ] Semáforos
 - [ ] Uso de semáforos

@@ -26,7 +26,7 @@ add_executable(PingPongOs src/main.c
 #        tests/dispatcher_tests/dispatcher_test.c
 #        tests/scheduler_tests/scheduler_test.c
 #        tests/preemption_tests/preemption_test.c
-        tests/time_accounting_tests/accounting_without_prio_test.c
+#        tests/time_accounting_tests/accounting_without_prio_test.c
+#        tests/suspended_tasks_tests/task_wait_test.c
 #        tests/time_accounting_tests/accounting_with_prio_test.c
-
 )
