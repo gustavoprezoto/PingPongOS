@@ -26,13 +26,11 @@ void queue_print (char *name, queue_t *queue, void print_elem (void*) ) {
     printf("%s", name);
     printf("[");
 
-    // Se a fila é nula, então aborta.
     if (queue == NULL) {
         printf("]\n");
         return;
     }
 
-    // Caso externo (só para não printar o primeiro espaço a esquerda)
     print_elem(iterator);
     iterator = iterator->next;
 

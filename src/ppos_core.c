@@ -23,19 +23,19 @@ struct itimerval preemption_timer;
 volatile struct sigaction *preemption_timer_handler;
 struct sigaction *metrics_timer_handler;
 
-void start_time_preemption();
-void time_preemption_handler(int signum);
+void __start_time_preemption();
+void __time_preemption_handler(int signum);
 
 void dispatcher();
 
-void age_task_dynamic_priority(task_t *task);
+void __age_task_dynamic_priority(task_t *task);
 
 void print_elem (void *ptr);
 
 void update_global_metrics_timer();
 void finish_task_metrics(task_t *task);
 
-void print_task_metrics(task_t *task);
+void __print_task_metrics(task_t *task);
 
 void task_suspend(task_t **queue);
 void task_awake(task_t * task, task_t **queue);
@@ -52,7 +52,7 @@ void ppos_init() {
     main_task.id = task_id_counter;
     ppos_systime = 0;
 
-    start_time_preemption();
+    __start_time_preemption();
 
     queue_append((queue_t**) &active_task_queue, (queue_t*) &main_task);
 
@@ -88,7 +88,7 @@ task_t* scheduler() {
     queue_iterator = active_task_queue;
     do {
         if(queue_iterator != next_scheduled_task)
-            age_task_dynamic_priority(queue_iterator);
+            __age_task_dynamic_priority(queue_iterator);
 
         queue_iterator = queue_iterator->next;
     } while (queue_iterator != active_task_queue);
@@ -96,7 +96,7 @@ task_t* scheduler() {
     return next_scheduled_task;
 }
 
-void age_task_dynamic_priority(task_t *task) {
+void __age_task_dynamic_priority(task_t *task) {
     if (task->dynamic_priority != PRIORITY_MIN)
         task->dynamic_priority -= PRIORITY_AGING_FACTOR;
 }
@@ -220,7 +220,7 @@ void task_exit(int exit_code) {
     free_task = current_exec_task;
 
     finish_task_metrics(current_exec_task);
-    print_task_metrics(current_exec_task);
+    __print_task_metrics(current_exec_task);
 
     if(current_exec_task == &dispatcher_task) {
         task_switch(&main_task);
@@ -229,7 +229,6 @@ void task_exit(int exit_code) {
         __awake_tasks(current_exec_task);
         if(current_exec_task != &main_task) {
             queue_remove((queue_t**) &active_task_queue, (queue_t*) current_exec_task);
-            // finish_task_metrics(current_exec_task);
         }
         task_switch(&dispatcher_task);
     }
@@ -263,7 +262,7 @@ struct sigaction* create_SIGALRM_handler(void (*handler)(int)) {
     return action_p;
 }
 
-void start_time_preemption() {
+void __start_time_preemption() {
     // Set timer
     preemption_timer.it_value.tv_usec = PPOS_TIMER_INTERVAL_USEC; // ?
     preemption_timer.it_value.tv_sec  = 0;
@@ -276,10 +275,10 @@ void start_time_preemption() {
     }
 
     // Create timer handlers (preemption and task clock)
-    preemption_timer_handler = create_SIGALRM_handler(time_preemption_handler);
+    preemption_timer_handler = create_SIGALRM_handler(__time_preemption_handler);
 }
 
-void time_preemption_handler(int signum) {
+void __time_preemption_handler(int signum) {
     update_global_metrics_timer();
 
     if(current_exec_task != &dispatcher_task) {
@@ -289,11 +288,6 @@ void time_preemption_handler(int signum) {
         }
 
         current_exec_task->quantum -= PPOS_QUANTUM_LOSS_FACTOR_PER_TICK;
-        // if(current_exec_task != &main_task) {
-        //     if (current_exec_task->quantum <= 0) {
-        //         task_yield();
-        //     }
-        // }
         if (current_exec_task->quantum <= 0) {
             task_yield();
         }
@@ -315,7 +309,7 @@ unsigned int systime() {
     return ppos_systime;
 }
 
-void print_task_metrics(task_t *task) {
+void __print_task_metrics(task_t *task) {
     printf("Task %d: execution time %d ms, processor time %d ms, %d activations\n",
         task->id, task->metrics.execution_time, task->metrics.cpu_time, task->metrics.activation);
 }
@@ -354,7 +348,6 @@ void task_suspend(task_t **queue) {
     queue_append((queue_t**) queue, (queue_t*) current_exec_task);
 
     task_switch(&dispatcher_task);
-    // task_yield();
 }
 
 void task_awake(task_t *task, task_t **queue) {
